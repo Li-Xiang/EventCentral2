@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<title>@事件监控客户端@</title>
+	
+	<link rel="stylesheet" th:href="@{/css/glyphicons.css}"></link>
+	<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}"></link>
+	<link rel="stylesheet" th:href="@{/css/bootstrap-table.min.css}"></link>
+
+	<script th:src="@{/js/jquery-3.6.0.min.js}"></script>
+	<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+	<script th:src="@{/js/bootstrap.min.js}"></script>
+	<script th:src="@{/js/bootstrap-table.min.js}"></script>
+	<script th:src="@{/js/bootstrap-table-auto-refresh.min.js}"></script>
+	<script th:src="@{/js/bootstrap-table-locale-all.min.js}"></script>
+	
+	<style type="text/css">
+		body {
+			font-family: Helvetica, Arial, Consolas, 'Microsoft YaHei', Tahoma, sans-serif;
+		}
+	</style>
+</head>
+
+<body class="gray-bg">
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-sm-12">
+				<h3 class="display-5">事件监控面板</h3>
+				<div class="font-italic">[监听进程信息]:
+					<ul id="listener_info"></ul>
+				</div>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-sm-12">
+				<div class="bootstrap-table">
+					<div id="toolbar" class="fixed-table-toolbar">
+						<div class="bs-bars pull-left">
+							<div class="form-inline" role="form">
+								<label for="checkbox_showall"><input type="checkbox"
+									id="checkbox_showall"> &nbsp;显示所有事件</label>
+							</div>
+						</div>
+					</div>
+					<div class="fixed-table-container">
+						<table id="event-table"></table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="event_detail_modal" tabindex="-1" role="dialog">
+		<div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 980px">
+			<div class="modal-content">
+				<div class="modal-header">
+					<label class="modal-title bg-light">事件详细数据</label>
+					<button type="button" class="close" data-dismiss="modal"
+						aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<pre id="event_detail_modal_msg"></pre>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn btn-primary btn-sm"
+						data-dismiss="modal">取消</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div class="modal fade" id="close_confirm_modal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<p id="close_confirm_modal_msg"></p>
+				</div>
+				<div class="modal-footer">
+					<button id="close_confirmed" type="button" data-eid="" class="btn btn-danger px-4" data-dismiss="modal">关闭事件</button>
+					<button type="button" class="btn btn btn-primary btn-sm" data-dismiss="modal">取消</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+</body>
+
+<script>
+	var $eventTable = $('#event-table');
+	var $showAll = $("#checkbox_showall");
+
+	$(function() {
+		initTable();
+	})
+
+	$(function() {
+		$showAll.change(function() {
+			/*
+			var opt = {
+				url : '/get-events',
+				query : {showAll : $showAll.is(':checked'),}
+			};
+			$eventTable.bootstrapTable('refresh', opt);
+			 */
+			$eventTable.bootstrapTable('refresh');
+		});
+	})
+
+	$(function() {
+		$('#close_confirmed').on('click', function(event) {//.click(function(event) {
+			var id = $(this).data('id');
+			$.ajax({
+				url : "/close-event",
+				type : 'POST',
+				data : {
+					eid : id
+				},
+				success : function(result) {
+					var json = $.parseJSON(result);
+					if (!json.success) {
+						alert(result);
+					}
+					$eventTable.bootstrapTable('refresh');
+				}
+			});
+		});
+	})
+	
+	$(document).ready(function(){
+		getListenerInfo();
+		setInterval(getListenerInfo, 120000);
+	});
+	
+	function getListenerInfo() {
+		$.ajax({
+			url : '/get-listener-info',
+			async: true,
+			dataType:'json',
+			success : function(response) {
+				var listenerInfo = "";
+				for (var i = 0; i < response.length; i++) {
+					listenerInfo += "<li>Listener: " + response[i].name + ", protocol=" + response[i].protocol + ", port=" + response[i].port + ", listening=" + response[i].listening + "</li>";
+				}
+				$("#listener_info").html(listenerInfo);
+			}
+		});
+	}
+
+	function initTable() {
+		$eventTable.bootstrapTable('destroy').bootstrapTable({
+					//// 基本设置
+					height : 740,
+					headerStyle : 'headerStyle',
+					striped : true,
+					locale : 'zh-CN',
+					showRefresh : true,
+					showColumns : true,
+					showFullscreen : true,
+					buttonsAlign : 'right',
+					toolbar : "#toolbar",
+					iconsPrefix : 'glyphicon',
+					iconSize : 'sm',
+					icons : {
+						autoRefresh : 'glyphicon-time',
+						refresh : 'glyphicon-repeat',
+						fullscreen : 'glyphicon-fullscreen',
+						columns : 'glyphicon-list'
+					},
+					/// 自动刷新
+					autoRefresh : true,
+					autoRefreshInterval : 30,
+					showAutoRefresh : true,
+					autoRefreshStatus : true,
+
+					//// 分页
+					url : '/get-events',
+					pagination : true,
+					sidePagination : "server",
+					pageNumber : 1,
+					pageSize : 25,
+					pageList : [ 10, 25, 50 ],
+					showExtendedPagination : false,
+					queryParams : function(params) { //向后台传值
+						return {
+							showAll : $('#checkbox_showall').is(':checked'),
+							currentPage : (params.offset / params.limit),
+							pageSize : params.limit,
+						}
+					},
+					//// 列
+					columns : [
+							{
+								field : 'id',
+								title : '编号',
+								titleTooltip : '事件编号'
+							},
+							{
+								field : 'created',
+								title : '时间戳',
+								width : '180'
+							},
+							{
+								field : 'severity',
+								title : '严重等级'
+							},
+							{
+								field : 'type',
+								title : '类型'
+							},
+							{
+								field : 'source',
+								title : '事件源'
+							},
+							{
+								field : 'state',
+								title : '状态'
+							},
+							{
+								field : 'digest',
+								title : '摘要'
+							},
+							{
+								field : 'data',
+								title : '事件数据',
+								visible : false
+							},
+							{
+								title : '操作',
+								formatter : actionFormatter,
+								events : {
+									'click #close' : function(e, value, row, index) {
+										$('#close_confirm_modal_msg').text('关闭事件: ' + row.id + '?');
+										$('#close_confirmed').data('id', row.id);
+										$("#close_confirm_modal").modal();
+									},
+									'click #detail' : function(e, value, row, index) {
+										var formattedData = JSON.stringify(JSON.parse(row.data), null, 2);
+										$('#event_detail_modal_msg').text(formattedData);
+										$("#event_detail_modal").modal();
+									}
+								}
+							} ]
+				//// columns end.
+				});
+	}
+	//// initTable end.
+
+	function actionFormatter(value, row) {
+		var result = '<div class="btn-group" role="group">'
+				//+ '<button type="button" id="close" class="btn btn-outline-secondary btn-sm"><span class="glyphicon glyphicon-ok-circle" style="font-size:20px;" aria-hidden="true"></span></button>'
+				+ '<button type="button" id="close" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-ok-circle" style="font-size:20px;" aria-hidden="true"></span></button>'
+				+ '<button type="button" id="detail" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-info-sign"style="font-size:20px;"  aria-hidden="true"></span></button>'
+				+ '</div>';
+		return result;
+	}
+
+	function headerStyle(column) {
+		return {
+			css : {
+				"color" : "#495057",
+				"background-color" : "#e9ecef",
+				"border-color" : "#dee2e6"
+			}
+		//css: {background: 'yellow'}
+		}
+	}
+</script>
+</html>
