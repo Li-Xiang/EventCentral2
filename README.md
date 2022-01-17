@@ -5,7 +5,7 @@ EventCentral2(EC2)是EventCentral迁移到SpringBoot平台上的版本。
   - A MySQL (like) database
 
 ### 1. 下载/构建EC2
-1. 直接下载发布版本，解压即可。
+1. 直接下载发布版本(https://github.com/Li-Xiang/EventCentral2/releases)，解压即可。
 
 2. EC2可以通过源代码基于apache maven自己构建:
 ```
